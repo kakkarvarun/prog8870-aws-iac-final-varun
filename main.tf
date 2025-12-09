@@ -50,3 +50,162 @@ resource "aws_s3_bucket_public_access_block" "project_buckets" {
   ignore_public_acls      = true
   restrict_public_buckets = true
 }
+
+############################################
+# VPC & Networking (Module 2 foundation)
+############################################
+
+resource "aws_vpc" "main" {
+  cidr_block           = var.vpc_cidr
+  enable_dns_support   = true
+  enable_dns_hostnames = true
+
+  tags = {
+    Name    = "${var.project_name}-vpc"
+    Project = var.project_name
+  }
+}
+
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.main.id
+
+  tags = {
+    Name    = "${var.project_name}-igw"
+    Project = var.project_name
+  }
+}
+
+resource "aws_subnet" "public" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = var.public_subnet_cidr
+  availability_zone       = var.availability_zones[0]
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name    = "${var.project_name}-public-subnet"
+    Project = var.project_name
+  }
+}
+
+resource "aws_subnet" "db_subnet1" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = var.db_subnet1_cidr
+  availability_zone       = var.availability_zones[0]
+  map_public_ip_on_launch = false
+
+  tags = {
+    Name    = "${var.project_name}-db-subnet-1"
+    Project = var.project_name
+  }
+}
+
+resource "aws_subnet" "db_subnet2" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = var.db_subnet2_cidr
+  availability_zone       = var.availability_zones[1]
+  map_public_ip_on_launch = false
+
+  tags = {
+    Name    = "${var.project_name}-db-subnet-2"
+    Project = var.project_name
+  }
+}
+
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
+  }
+
+  tags = {
+    Name    = "${var.project_name}-public-rt"
+    Project = var.project_name
+  }
+}
+
+resource "aws_route_table_association" "public_assoc" {
+  subnet_id      = aws_subnet.public.id
+  route_table_id = aws_route_table.public.id
+}
+
+############################################
+# Security Groups
+############################################
+
+resource "aws_security_group" "ec2_sg" {
+  name        = "${var.project_name}-ec2-sg"
+  description = "Allow SSH to EC2"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description = "SSH from allowed CIDR"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.allowed_ssh_cidr]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name    = "${var.project_name}-ec2-sg"
+    Project = var.project_name
+  }
+}
+
+resource "aws_security_group" "rds_sg" {
+  name        = "${var.project_name}-rds-sg"
+  description = "Allow MySQL access"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description = "MySQL from allowed CIDR"
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    cidr_blocks = [var.allowed_db_cidr]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name    = "${var.project_name}-rds-sg"
+    Project = var.project_name
+  }
+}
+
+############################################
+# EC2 Instance (Module 2)
+############################################
+
+resource "aws_instance" "web" {
+  ami                         = var.ec2_ami_id
+  instance_type               = var.ec2_instance_type
+  subnet_id                   = aws_subnet.public.id
+  vpc_security_group_ids      = [aws_security_group.ec2_sg.id]
+  key_name                    = var.ec2_key_name
+  associate_public_ip_address = true
+
+  tags = {
+    Name    = "${var.project_name}-ec2"
+    Project = var.project_name
+    Role    = "demo-web"
+  }
+}
+
+output "ec2_public_ip" {
+  description = "Public IP of EC2 instance"
+  value       = aws_instance.web.public_ip
+}
