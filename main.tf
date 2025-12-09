@@ -209,3 +209,44 @@ output "ec2_public_ip" {
   description = "Public IP of EC2 instance"
   value       = aws_instance.web.public_ip
 }
+
+############################################
+# RDS MySQL (Module 3)
+############################################
+
+resource "aws_db_subnet_group" "rds_subnets" {
+  name       = "${var.project_name}-db-subnet-group"
+  subnet_ids = [aws_subnet.db_subnet1.id, aws_subnet.db_subnet2.id]
+
+  tags = {
+    Name    = "${var.project_name}-db-subnet-group"
+    Project = var.project_name
+  }
+}
+
+resource "aws_db_instance" "mysql" {
+  identifier             = "${var.project_name}-mysql"
+  engine                 = "mysql"
+  engine_version         = var.db_engine_version
+  instance_class         = var.db_instance_class
+  allocated_storage      = var.db_allocated_storage
+  db_name                = var.db_name
+  username               = var.db_username
+  password               = var.db_password
+  db_subnet_group_name   = aws_db_subnet_group.rds_subnets.name
+  vpc_security_group_ids = [aws_security_group.rds_sg.id]
+  publicly_accessible    = false
+  skip_final_snapshot    = true
+  deletion_protection    = false
+  multi_az               = false
+
+  tags = {
+    Name    = "${var.project_name}-mysql"
+    Project = var.project_name
+  }
+}
+
+output "rds_endpoint" {
+  description = "RDS endpoint"
+  value       = aws_db_instance.mysql.endpoint
+}
