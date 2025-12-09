@@ -1,0 +1,80 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'PROG8870 - CloudFormation: 3 private S3 buckets with versioning'
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: prog8870-final-varun
+    Description: Project name used for tagging
+  Bucket1Name:
+    Type: String
+    Description: Globally unique name for S3 bucket 1
+  Bucket2Name:
+    Type: String
+    Description: Globally unique name for S3 bucket 2
+  Bucket3Name:
+    Type: String
+    Description: Globally unique name for S3 bucket 3
+
+Resources:
+  S3Bucket1:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref Bucket1Name
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Name
+          Value: !Sub '${ProjectName}-cf-bucket1'
+
+  S3Bucket2:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref Bucket2Name
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Name
+          Value: !Sub '${ProjectName}-cf-bucket2'
+
+  S3Bucket3:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref Bucket3Name
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Name
+          Value: !Sub '${ProjectName}-cf-bucket3'
+
+Outputs:
+  Bucket1:
+    Description: Name of bucket 1
+    Value: !Ref S3Bucket1
+  Bucket2:
+    Description: Name of bucket 2
+    Value: !Ref S3Bucket2
+  Bucket3:
+    Description: Name of bucket 3
+    Value: !Ref S3Bucket3
